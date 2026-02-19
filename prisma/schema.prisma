@@ -1,0 +1,87 @@
+// Schema de Prisma para Visuarte Print Shop MVP
+// Soporta PostgreSQL (produccion) y SQLite (desarrollo local)
+// Modelos: Product, ProductPrice, Cotizacion, Lead
+// Para anadir nuevos modelos: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Cambiar a "postgresql" para produccion (Vercel/Neon)
+  // SQLite solo para desarrollo local
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Producto del catalogo de Visuarte Print Shop
+// Tipos: cantidad_fija (precios por cantidades), por_m2 (precio por metro cuadrado)
+model Product {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  nombre      String
+  descripcion String?
+  categoria   String?  // Categoria del producto (ej: Lonas PVC, Tarjetas, Flyers)
+  tipo        String   // "cantidad_fija" | "por_m2"
+  unidad      String   @default("uds") // "uds" | "m2"
+  precioPorM2 Float?   // Solo para tipo = "por_m2"
+  activo      Boolean  @default(true)
+  popular     Boolean  @default(false) // Mostrar como popular en home
+  ordenVisual Int      @default(0) // Orden de visualizacion
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  precios     ProductPrice[]
+  cotizaciones Cotizacion[]
+}
+
+// Precio por cantidad para un producto
+// Permite tener multiples precios segun cantidad (ej: 100, 500, 1000 uds)
+model ProductPrice {
+  id          String  @id @default(cuid())
+  cantidad   Int
+  precioBase Float
+  variante   String? // ej: "1 tinta", "2 tintas", etc.
+  anchoCm    Int?    // Ancho en cm (para lonas)
+  altoCm     Int?    // Alto en cm (para lonas)
+  tipoAcabado String? // Tipo de acabado (ej: ojeales, Reinforced)
+
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+}
+
+// Cotizacion realizada por un lead
+// Guarda: producto, cantidad/area, precio (base/iva/total), fecha, leadScoring
+model Cotizacion {
+  id         String   @id @default(cuid())
+  cantidad   Int?     // Cantidad de unidades o metros cuadrados
+  areaM2     Float?   // Area en metros cuadrados (solo para tipo=por_m2)
+  base       Float    // Precio base sin IVA
+  iva        Float    // IVA aplicado
+  total      Float    // Total con IVA
+  leadScoring String  @default("tibio") // "tibio" | "frio" | "caliente"
+  createdAt  DateTime @default(now())
+
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  String
+
+  leads      Lead[]
+}
+
+// Lead captado en el sistema
+// Puede tener: archivo subido, mensaje opcional, scoring
+model Lead {
+  id              String    @id @default(cuid())
+  archivoNombre   String?
+  archivoPath     String?   // URL del archivo en Vercel Blob
+  archivoSize     Int?
+  archivoType     String?
+  mensaje         String?
+  leadScoring    String    @default("tibio") // "tibio" | "frio" | "caliente"
+  notificado      Boolean   @default(false)
+  notificadoAt   DateTime?
+  createdAt       DateTime  @default(now())
+
+  cotizacion      Cotizacion? @relation(fields: [cotizacionId], references: [id])
+  cotizacionId   String?
+}
