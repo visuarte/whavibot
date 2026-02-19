@@ -26,6 +26,10 @@ export interface PrecioCalculado {
     base: number
     iva: number
     total: number
-    cantidad: string
-    producto: string
+    cantidad: number
+    producto: {
+        nombre: string
+        key: string
+    }
+    unidad?: string
 }

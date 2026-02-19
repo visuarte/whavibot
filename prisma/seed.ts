@@ -22,7 +22,7 @@ async function main() {
             descripcion: "Papel estándar sin laminar",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 350 gr",
             prices: {
                 create: [
@@ -43,7 +43,7 @@ async function main() {
             descripcion: "Papel couché con laminado brillante",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 350 gr + Laminado",
             prices: {
                 create: [
@@ -64,7 +64,7 @@ async function main() {
             descripcion: "Papel offset premium con acabados especiales",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel Premium 400 gr",
             prices: {
                 create: [
@@ -84,7 +84,7 @@ async function main() {
             descripcion: "Pliegues: 2 (tríptico) o 3",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 135 gr couché",
             prices: {
                 create: [
@@ -105,7 +105,7 @@ async function main() {
             descripcion: "Flyers publicitarios",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 135 gr couché",
             prices: {
                 create: [
@@ -127,7 +127,7 @@ async function main() {
             descripcion: "Flyers publicitarios formato grande",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 135 gr couché",
             prices: {
                 create: [
@@ -148,7 +148,7 @@ async function main() {
             descripcion: "Trípticos publicitarios",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 135 gr couché",
             prices: {
                 create: [
@@ -169,7 +169,7 @@ async function main() {
             descripcion: "Dípticos publicitarios",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "pequeño_formato",
+            category: "pequeño_formato",
             material: "Papel 135 gr couché",
             prices: {
                 create: [
@@ -193,7 +193,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 7.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "PVC Frontlit 400 µ",
         },
     })
@@ -207,7 +207,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 7.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Microperforado PVC",
         },
     })
@@ -221,7 +221,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 8.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Vinilo Monomérico",
         },
     })
@@ -235,7 +235,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 10.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Vinilo Transparente",
         },
     })
@@ -248,7 +248,7 @@ async function main() {
             descripcion: "Lona de gran formato para campañas",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "PVC 450 gr",
             prices: {
                 create: [
@@ -271,7 +271,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 9.00,
             unidad: "m²",
-            categoria: "gran_formato_rigido",
+            category: "gran_formato_rigido",
             material: "PVC Forex 5mm",
         },
     })
@@ -285,7 +285,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 18.00,
             unidad: "m²",
-            categoria: "gran_formato_rigido",
+            category: "gran_formato_rigido",
             material: "Metacrilato 3mm",
         },
     })
@@ -299,7 +299,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 4.50,
             unidad: "m²",
-            categoria: "gran_formato_rigido",
+            category: "gran_formato_rigido",
             material: "Cartón Compacto 1.5mm",
         },
     })
@@ -313,7 +313,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 22.00,
             unidad: "m²",
-            categoria: "gran_formato_rigido",
+            category: "gran_formato_rigido",
             material: "Dibond 3mm",
         },
     })
@@ -329,7 +329,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 10.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Tela Polyester 180gr",
         },
     })
@@ -343,7 +343,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 19.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Tela Backlight 220gr",
         },
     })
@@ -356,7 +356,7 @@ async function main() {
             descripcion: "Fondos para fotografía eventos",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Tela Lycra",
             prices: {
                 create: [
@@ -375,7 +375,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 12.00,
             unidad: "m²",
-            categoria: "gran_formato_rigido",
+            category: "gran_formato_rigido",
             material: "PVC Semi-rígido",
         },
     })
@@ -389,7 +389,7 @@ async function main() {
             tipo: "por_m2",
             precioPorM2: 15.00,
             unidad: "m²",
-            categoria: "gran_formato_flexible",
+            category: "gran_formato_flexible",
             material: "Vinilo Suelo Antideslizante",
         },
     })
@@ -404,7 +404,7 @@ async function main() {
             descripcion: "Flag publicitario forma gota",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "senaletica",
+            category: "senaletica",
             material: "Tela Polyester",
             prices: {
                 create: [
@@ -423,7 +423,7 @@ async function main() {
             descripcion: "Flag publicitario forma ala",
             tipo: "cantidad_fija",
             unidad: "uds",
-            categoria: "senaletica",
+            category: "senaletica",
             material: "Tela Polyester",
             prices: {
                 create: [

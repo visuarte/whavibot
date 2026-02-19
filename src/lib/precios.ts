@@ -164,17 +164,18 @@ export async function calcularPrecio(
     }
 
     let base = 0
-    let cantidadFinal = cantidad
+    let cantidadFinal: number
 
     // Producto por metro cuadrado
     if (producto.tipo === "por_m2") {
         const area = areaM2 || 1
         base = (producto.precioPorM2 || 0) * area
-        cantidadFinal = `${area} m²`
+        cantidadFinal = area
     }
     // Producto con cantidad fija
     else if (producto.tipo === "cantidad_fija" && producto.precios) {
         const cantidadNum = parseInt(String(cantidad)) || 0
+        cantidadFinal = cantidadNum
 
         // Buscar precio exacto o interpolar
         const precios = producto.precios
@@ -197,6 +198,9 @@ export async function calcularPrecio(
                 base = precios[mayor]
             }
         }
+    } else {
+        // Default para productos sin precios definidos
+        cantidadFinal = parseInt(String(cantidad)) || 1
     }
 
     // Redondeo psicológico
@@ -209,8 +213,11 @@ export async function calcularPrecio(
         base,
         iva,
         total,
-        cantidad: String(cantidadFinal),
-        producto: producto.nombre
+        cantidad: cantidadFinal,
+        producto: {
+            nombre: producto.nombre,
+            key: producto.key
+        }
     }
 }
 

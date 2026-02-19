@@ -21,6 +21,12 @@ model Product {
   category     String   // "gran_formato_flexible", "gran_formato_rigido", "pequeño_formato"
   material     String?  // material principal
   sizeOptions  Json?    // {sizes: ["50x70 cm", "A3"]}
+  activo       Boolean  @default(true)
+  popular      Boolean  @default(false)
+  ordenVisual  Int      @default(0)
+  anchoCm      Int?
+  altoCm       Int?
+  tipoAcabado  String?  // "sin_acabado", "mate", "brillo", "laminado"
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   prices       ProductPrice[]
@@ -60,13 +66,16 @@ model Cotizacion {
 }
 
 model Lead {
-  id            String    @id @default(uuid())
+  id             String    @id @default(uuid())
   cotizacionId  String?   @unique
-  archivoNombre String?
-  archivoPath   String?
-  mensaje       String?
+  archivoNombre  String?
+  archivoPath    String?
+  archivoSize    Int?
+  archivoType    String?
+  mensaje        String?
   leadScoring   String
   notificado    Boolean   @default(false)
+  notificadoAt  DateTime?
   createdAt     DateTime  @default(now())
   cotizacion    Cotizacion? @relation(fields: [cotizacionId], references: [id])
 }

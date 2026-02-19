@@ -280,7 +280,7 @@ export default function CotizarPage() {
                                     {selectedVariante && ` - ${selectedVariante}`}
                                     {" - "}{typeof resultado.cantidad === "number"
                                         ? resultado.cantidad.toLocaleString("es-ES")
-                                        : resultado.cantidad} {resultado.producto.unidad}
+                                        : resultado.cantidad} {productoSeleccionado?.unidad}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
