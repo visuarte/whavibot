@@ -167,7 +167,16 @@ async function generateImage(prompt, productKey) {
             }
         );
 
-        const generationId = response.data.generations[0].id;
+        console.log('   📊 Response status:', response.status);
+        console.log('   📊 Response data:', JSON.stringify(response.data, null, 2));
+
+        // Verificar estructura de respuesta
+        if (!response.data || !response.data.sdGenerationJob || !response.data.sdGenerationJob.generationId) {
+            console.error('   ❌ Estructura de respuesta inválida');
+            return null;
+        }
+
+        const generationId = response.data.sdGenerationJob.generationId;
         console.log(`   📝 Generation ID: ${generationId}`);
 
         return generationId;
@@ -196,10 +205,14 @@ async function waitAndDownload(generationId, productKey, maxAttempts = 30) {
                 }
             );
 
-            const status = response.data.generations[0].status;
+            console.log('   📊 Status response:', JSON.stringify(response.data, null, 2));
+
+            // Nueva estructura de respuesta - API v1 usa generations_by_pk
+            const generationData = response.data.generations_by_pk || response.data.generations?.[0] || response.data;
+            const status = generationData.status;
 
             if (status === 'COMPLETE') {
-                const imageUrl = response.data.generations[0].generated_images[0].url;
+                const imageUrl = generationData.generated_images?.[0]?.url || generationData.url;
                 console.log(`   ✅ Imagen lista: ${imageUrl}`);
                 return imageUrl;
             } else if (status === 'FAILED') {
