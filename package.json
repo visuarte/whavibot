@@ -21,6 +21,7 @@
     "@prisma/adapter-libsql": "^7.4.0",
     "@prisma/client": "^5.22.0",
     "@vercel/blob": "^2.2.0",
+    "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
@@ -50,5 +51,10 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "ajv": "^8.18.0",
+    "minimatch": "^10.2.1",
+    "tmp": "^0.2.3"
   }
 }
