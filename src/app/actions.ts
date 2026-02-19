@@ -6,8 +6,17 @@
  * Mantiene la API key de CallMeBot segura en el servidor
  */
 
+import { calcularPrecio } from "@/lib/precios"
+
 interface SendWhatsAppParams {
     message: string
+}
+
+interface CalcularPrecioParams {
+    productoKey: string
+    cantidad: number | string
+    areaM2?: number
+    varianteIndex?: number
 }
 
 /**
@@ -55,6 +64,29 @@ export async function sendWhatsAppNotification({ message }: SendWhatsAppParams):
 
     } catch (error) {
         console.error("[WhatsApp Server Action] ✗ Error:", error instanceof Error ? error.message : "Error desconocido")
+    }
+}
+
+/**
+ * Server Action para calcular precio
+ * 
+ * Ejecuta la lógica de precios en el servidor para evitar que Prisma se bundlee en el cliente
+ */
+export async function calcularPrecioServer(
+    productoKey: string,
+    cantidad: number | string,
+    areaM2?: number,
+    varianteIndex?: number
+) {
+    try {
+        const resultado = await calcularPrecio(productoKey, cantidad, areaM2, varianteIndex)
+        return { success: true, data: resultado }
+    } catch (error) {
+        console.error("[calcularPrecioServer] Error:", error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Error desconocido"
+        }
     }
 }
 

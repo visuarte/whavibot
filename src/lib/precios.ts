@@ -1,156 +1,84 @@
 /**
  * Módulo de productos y precios - Visuarte Print Shop
  * 
- * Ahora lee desde Prisma como fuente única de verdad.
+ * Ahora lee desde Neon PostgreSQL como fuente única de verdad.
  * Mantiene fallback estático solo para desarrollo sin DB.
  * 
  * Todos los precios son BASE (sin IVA). 
  * El IVA se calcula como 21% sobre la base.
  */
 
-import { prisma } from "./prisma"
-import type { Product, ProductPrice, Cotizacion, Lead } from "@prisma/client"
+import { getProductsFromDB, getProductByKeyDB } from "./db"
+import type { ProductCatalog, PrecioCalculado, ProductType, ProductUnit } from "./types"
 
 /**
- * Tipo de producto según el tipo de cálculo de precio
+ * Fallback estático para desarrollo sin DB
  */
-export type ProductType = "cantidad_fija" | "por_m2"
-
-/**
- * Tipo de unidad de medida
- */
-export type ProductUnit = "uds" | "m²"
-
-/**
- * Variante de precio para productos con múltiples opciones
- */
-export interface ProductVariant {
-    nombre: string
-    precios: Record<number, number>
-}
-
-/**
- * Producto formateado para el catálogo
- */
-export interface ProductCatalog {
-    key: string
-    nombre: string
-    descripcion?: string
-    tipo: ProductType
-    precioPorM2?: number
-    cantidadesDisponibles: number[]
-    unidad: ProductUnit
-    precios?: Record<number, number>
-    variantes?: ProductVariant[]
-}
-
-/**
- * Resultado del cálculo de precio
- */
-export interface PrecioCalculado {
-    base: number
-    iva: number
-    total: number
-    producto: ProductCatalog
-    cantidad: number | string
-    variante?: string
-}
-
-/**
- * Constante del porcentaje de IVA
- */
-export const IVA_PERCENT = 0.21
-
-/**
- * Redondeo psicológico (Charm Pricing)
- * Convierte precio técnico a precio comercial terminado en 9
- * Ej: 84.09 → 89, 169.01 → 179, 238.50 → 249
- */
-export function redondeoPsicologico(precioTecnico: number): number {
-    // Redondea hacia arriba al siguiente múltiplo de 10, luego resta 1 para terminar en 9
-    const redondeado = Math.ceil(precioTecnico / 10) * 10
-    return parseFloat((redondeado - 0.01).toFixed(2)) // termina en .99
-}
-
-// Fallback estático para desarrollo (solo si DB no tiene datos)
 const PRODUCTS_FALLBACK: Record<string, ProductCatalog> = {
     tarjetas_clasicas: {
         key: "tarjetas_clasicas",
-        nombre: "Tarjetas de Visita Clásicas",
-        descripcion: "85x55 mm - Sin Laminar",
+        nombre: "Tarjetas Clásicas",
+        descripcion: "Tarjetas de visita clásicas",
         tipo: "cantidad_fija",
-        precios: { 250: 55.50, 500: 70.76, 1000: 90.05, 2500: 165.45 },
+        unidad: "uds",
         cantidadesDisponibles: [250, 500, 1000, 2500],
-        unidad: "uds"
+        precios: {
+            250: 55.50,
+            500: 70.76,
+            1000: 90.05,
+            2500: 165.45
+        }
     },
-    tarjetas_laminadas: {
-        key: "tarjetas_laminadas",
-        nombre: "Tarjetas Laminadas",
-        descripcion: "85x55 mm - Mate o Brillo",
-        tipo: "cantidad_fija",
-        precios: { 250: 75.10, 500: 90.56, 1000: 125.34, 2500: 169.90 },
-        cantidadesDisponibles: [250, 500, 1000, 2500],
-        unidad: "uds"
-    },
-    flyers_a5: {
-        key: "flyers_a5",
-        nombre: "Flyers A5",
-        descripcion: "148x210mm, 135gr 2 caras",
-        tipo: "cantidad_fija",
-        precios: { 100: 45.75, 250: 65.85, 500: 85.30, 750: 110.05, 1000: 125.40, 1500: 165.40, 2500: 185.25 },
-        cantidadesDisponibles: [100, 250, 500, 750, 1000, 1500, 2500],
-        unidad: "uds"
-    },
-    vinilos_corte: {
-        key: "vinilos_corte",
-        nombre: "Vinilos de Corte",
-        descripcion: "Con transportador, hasta 60x40cm, 2 colores",
+    lona_frontlit: {
+        key: "lona_frontlit",
+        nombre: "Lona Frontlit",
+        descripcion: "Lona publicitaria para exteriores",
         tipo: "por_m2",
-        precioPorM2: 55,
-        cantidadesDisponibles: [],
-        unidad: "m²"
+        precioPorM2: 7.00,
+        unidad: "m²",
+        cantidadesDisponibles: []
     }
 }
 
 /**
- * Convierte producto de Prisma a formato catálogo
+ * Convierte producto de DB a formato catálogo
  */
-function prismaToCatalog(p: Product & { precios?: ProductPrice[] }): ProductCatalog {
+function dbToCatalog(p: any): ProductCatalog {
+    const cantidades = p.prices ? p.prices.map((pr: any) => pr.cantidad).sort((a: number, b: number) => a - b) : []
+    const precios: Record<number, number> = {}
+    if (p.prices) {
+        p.prices.forEach((pr: any) => {
+            precios[pr.cantidad] = parseFloat(pr.precioBase)
+        })
+    }
+
     return {
         key: p.key,
         nombre: p.nombre,
-        descripcion: p.descripcion || undefined,
+        descripcion: p.descripcion,
         tipo: p.tipo as ProductType,
-        precioPorM2: p.precioPorM2 || undefined,
+        precioPorM2: p.precioPorM2 ? parseFloat(p.precioPorM2) : undefined,
         unidad: p.unidad as ProductUnit,
-        cantidadesDisponibles: p.precios?.map(px => px.cantidad).sort((a, b) => a - b) || [],
-        precios: p.precios?.reduce((acc, px) => {
-            acc[px.cantidad] = px.precioBase
-            return acc
-        }, {} as Record<number, number>)
+        cantidadesDisponibles: cantidades,
+        precios
     }
 }
 
 /**
  * Obtiene productos desde DB (fuente principal)
  */
-export async function getProductsFromDB(): Promise<Record<string, ProductCatalog>> {
+export async function getProductsFromDBCached(): Promise<Record<string, ProductCatalog>> {
     try {
-        const products = await prisma.product.findMany({
-            include: {
-                precios: { orderBy: { cantidad: 'asc' } }
-            },
-            orderBy: { nombre: 'asc' }
-        })
+        const products = await getProductsFromDB()
 
-        if (products.length === 0) {
+        if (!products || products.length === 0) {
             console.warn("[precios] DB vacía, usando fallback estático")
             return PRODUCTS_FALLBACK
         }
 
         const catalog: Record<string, ProductCatalog> = {}
-        products.forEach(p => {
-            catalog[p.key] = prismaToCatalog(p)
+        products.forEach((p: any) => {
+            catalog[p.key] = dbToCatalog(p)
         })
 
         return catalog
@@ -165,14 +93,13 @@ export async function getProductsFromDB(): Promise<Record<string, ProductCatalog
  */
 export async function getProductByKey(key: string): Promise<ProductCatalog | null> {
     try {
-        const product = await prisma.product.findUnique({
-            where: { key },
-            include: {
-                precios: { orderBy: { cantidad: 'asc' } }
-            }
-        })
+        const product = await getProductByKeyDB(key)
 
-        return product ? prismaToCatalog(product) : null
+        if (!product) {
+            return PRODUCTS_FALLBACK[key] || null
+        }
+
+        return dbToCatalog(product)
     } catch (error) {
         console.error("[precios] Error al obtener producto:", error)
         return PRODUCTS_FALLBACK[key] || null
@@ -183,7 +110,7 @@ export async function getProductByKey(key: string): Promise<ProductCatalog | nul
  * Obtiene lista de productos para select
  */
 export async function getProductList(): Promise<ProductCatalog[]> {
-    const products = await getProductsFromDB()
+    const products = await getProductsFromDBCached()
     return Object.values(products).sort((a, b) => a.nombre.localeCompare(b.nombre))
 }
 
@@ -199,37 +126,26 @@ export function tieneVariantes(product: ProductCatalog): boolean {
  * Obtiene variantes de un producto
  */
 export function getVariantes(product: ProductCatalog): string[] {
-    return (product as any).variantes?.map((v: ProductVariant) => v.nombre) || []
+    if (!product.precios) return []
+    return Object.keys(product.precios).map(String)
 }
 
-/**
- * Redondea a 2 decimales
- */
-function roundToTwo(num: number): number {
-    return Math.round((num + Number.EPSILON) * 100) / 100
-}
+// Re-export types
+export type { ProductCatalog, PrecioCalculado, ProductType, ProductUnit } from "./types"
+
+// IVA constants
+export const IVA_PERCENT = 0.21
 
 /**
- * Interpola precio para cantidad no exacta
+ * Redondeo psicológico - convierte precio técnico a comercial
+ * Ej: 84.09 -> 89.99, 120.50 -> 129.99
  */
-function interpolarPrecio(precios: Record<number, number>, cantidad: number): number {
-    const cantidades = Object.keys(precios).map(Number).sort((a, b) => a - b)
+export function redondeoPsicologico(base: number): number {
+    if (base <= 0) return 0
 
-    if (cantidades.length === 0) return 0
-    if (cantidad <= cantidades[0]) return precios[cantidades[0]]
-    if (cantidad >= cantidades[cantidades.length - 1]) return precios[cantidades[cantidades.length - 1]]
-
-    for (let i = 0; i < cantidades.length - 1; i++) {
-        if (cantidad >= cantidades[i] && cantidad <= cantidades[i + 1]) {
-            const menor = cantidades[i]
-            const mayor = cantidades[i + 1]
-            const precioMenor = precios[menor]
-            const precioMayor = precios[mayor]
-            const proporcion = (cantidad - menor) / (mayor - menor)
-            return roundToTwo(precioMenor + (precioMayor - precioMenor) * proporcion)
-        }
-    }
-    return 0
+    // Redondear a 9.99
+    const rounded = Math.ceil(base / 10) * 10 - 0.01
+    return Math.round(rounded * 100) / 100
 }
 
 /**
@@ -258,25 +174,45 @@ export async function calcularPrecio(
     }
     // Producto con cantidad fija
     else if (producto.tipo === "cantidad_fija" && producto.precios) {
-        const cantidadNum = typeof cantidad === "string" ? parseInt(cantidad) : cantidad
-        base = producto.precios[cantidadNum]
+        const cantidadNum = parseInt(String(cantidad)) || 0
 
-        if (base === undefined) {
-            base = interpolarPrecio(producto.precios, cantidadNum)
+        // Buscar precio exacto o interpolar
+        const precios = producto.precios
+
+        if (precios[cantidadNum]) {
+            base = precios[cantidadNum]
+        } else {
+            // Interpolar entre precios cercanos
+            const cantidades = Object.keys(precios).map(Number).sort((a, b) => a - b)
+            const menor = cantidades.filter(c => c <= cantidadNum).pop()
+            const mayor = cantidades.find(c => c >= cantidadNum)
+
+            if (menor && mayor && menor !== mayor) {
+                // Interpolación lineal
+                const ratio = (cantidadNum - menor) / (mayor - menor)
+                base = precios[menor] + (precios[mayor] - precios[menor]) * ratio
+            } else if (menor) {
+                base = precios[menor]
+            } else if (mayor) {
+                base = precios[mayor]
+            }
         }
     }
 
-    const iva = roundToTwo(base * IVA_PERCENT)
-    const total = roundToTwo(base + iva)
+    // Redondeo psicológico
+    base = redondeoPsicologico(base)
+
+    const iva = base * IVA_PERCENT
+    const total = base + iva
 
     return {
-        base: roundToTwo(base),
+        base,
         iva,
         total,
-        producto,
-        cantidad: cantidadFinal
+        cantidad: String(cantidadFinal),
+        producto: producto.nombre
     }
 }
 
-// Exportar PRODUCTS para compatibilidad (deprecated - usa getProductsFromDB)
+// Export PRODUCTS for backward compatibility (uses fallback in SSR)
 export const PRODUCTS = PRODUCTS_FALLBACK

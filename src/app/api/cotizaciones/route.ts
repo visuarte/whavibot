@@ -7,11 +7,11 @@
  */
 
 import { NextResponse } from "next/server"
-import { getCotizacionesRecientes } from "@/lib/db"
+import { getCotizaciones } from "@/lib/db"
 
 export async function GET() {
     try {
-        const cotizaciones = await getCotizacionesRecientes(20)
+        const cotizaciones = await getCotizaciones()
 
         return NextResponse.json({
             cotizaciones

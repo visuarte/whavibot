@@ -10,7 +10,6 @@ import { ArrowLeft, Calculator, Printer, CheckCircle, Info, Loader2 } from "luci
 import Link from "next/link"
 import {
     PRODUCTS,
-    calcularPrecio,
     getProductList,
     tieneVariantes,
     getVariantes,
@@ -18,6 +17,7 @@ import {
     type ProductCatalog,
     IVA_PERCENT
 } from "@/lib/precios"
+import { calcularPrecioServer } from "@/app/actions"
 
 export default function CotizarPage() {
     const [selectedProductKey, setSelectedProductKey] = useState<string>("")
@@ -97,16 +97,20 @@ export default function CotizarPage() {
                 cantidad = parseInt(selectedCantidad) || 0
             }
 
-            // calcularPrecio ahora es async
-            const resultadoCalculado = await calcularPrecio(
+            // Usar Server Action para calcular precio (ejecuta en servidor, no bundlea Prisma)
+            const result = await calcularPrecioServer(
                 selectedProductKey,
                 cantidad,
                 producto.tipo === "por_m2" ? parseFloat(areaM2) || 1 : undefined,
                 varianteIndex !== undefined && varianteIndex >= 0 ? varianteIndex : undefined
             )
 
-            setResultado(resultadoCalculado)
-            setCalculoRealizado(true)
+            if (result.success && result.data) {
+                setResultado(result.data)
+                setCalculoRealizado(true)
+            } else {
+                console.error("Error al calcular:", result.error)
+            }
 
         } catch (error) {
             console.error("Error al calcular:", error)
