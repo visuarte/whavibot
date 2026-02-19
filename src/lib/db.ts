@@ -147,9 +147,7 @@ export async function markLeadAsNotified(id: string) {
  */
 export async function getProductCatalog() {
     const products = await prisma.product.findMany({
-        where: { activo: true },
         orderBy: [
-            { ordenVisual: 'asc' },
             { nombre: 'asc' }
         ],
         include: {
@@ -279,8 +277,6 @@ export const guardarLead = async (data: {
     cotizacionId?: string | null
     archivoNombre?: string | null
     archivoPath?: string | null
-    archivoSize?: number | null
-    archivoType?: string | null
     mensaje?: string | null
     leadScoring: string
 }) => {
@@ -290,8 +286,6 @@ export const guardarLead = async (data: {
                 cotizacionId: data.cotizacionId || null,
                 archivoNombre: data.archivoNombre || null,
                 archivoPath: data.archivoPath || null,
-                archivoSize: data.archivoSize || null,
-                archivoType: data.archivoType || null,
                 mensaje: data.mensaje || null,
                 leadScoring: data.leadScoring
             }

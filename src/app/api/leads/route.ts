@@ -61,8 +61,6 @@ export async function POST(request: NextRequest) {
         let cotizacionId: string | null = null
         let archivoNombre: string | null = null
         let archivoPath: string | null = null
-        let archivoSize: number | null = null
-        let archivoType: string | null = null
         let mensaje: string | null = null
         let leadScoring = "caliente"
 
@@ -84,8 +82,6 @@ export async function POST(request: NextRequest) {
             }
 
             archivoNombre = archivo.name
-            archivoSize = archivo.size
-            archivoType = archivo.type
 
             // Subir archivo a Vercel Blob
             try {
@@ -116,8 +112,6 @@ export async function POST(request: NextRequest) {
             if (archivo) {
                 archivoNombre = archivo.nombre || null
                 archivoPath = archivo.path || null
-                archivoSize = archivo.size || null
-                archivoType = archivo.type || null
             }
         }
 
@@ -134,8 +128,6 @@ export async function POST(request: NextRequest) {
             cotizacionId,
             archivoNombre,
             archivoPath,
-            archivoSize,
-            archivoType,
             mensaje,
             leadScoring
         })
