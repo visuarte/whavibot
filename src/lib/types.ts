@@ -14,6 +14,7 @@ export interface ProductCatalog {
     key: string
     nombre: string
     descripcion?: string
+    imagen?: string
     tipo: ProductType
     precioPorM2?: number
     cantidadesDisponibles: number[]

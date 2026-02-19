@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Calculator, Printer, CheckCircle, Info, Loader2 } from "lucide-react"
+import { ArrowLeft, Calculator, Printer, CheckCircle, Info, Loader2, ImageIcon } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import {
     PRODUCTS,
     getProductList,
@@ -44,6 +45,7 @@ export default function CotizarPage() {
                     key: p.key,
                     nombre: p.nombre,
                     descripcion: p.descripcion || '',
+                    imagen: p.imagen || '',
                     tipo: p.tipo as "cantidad_fija" | "por_m2",
                     unidad: p.unidad as "uds" | "m²",
                     precios: p.precios?.reduce((acc: Record<number, number>, px: any) => {
@@ -328,15 +330,30 @@ export default function CotizarPage() {
                                 {productList.slice(0, 8).map((product) => (
                                     <div
                                         key={product.key}
-                                        className="text-sm p-2 rounded hover:bg-muted/50 cursor-pointer transition-colors"
+                                        className="flex items-center gap-3 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer transition-colors"
                                         onClick={() => handleProductChange(product.key)}
                                     >
-                                        <span className="font-medium">{product.nombre}</span>
-                                        {product.descripcion && (
-                                            <span className="text-muted-foreground text-xs block">
-                                                {product.descripcion}
-                                            </span>
+                                        {product.imagen ? (
+                                            <Image
+                                                src={product.imagen}
+                                                alt={product.nombre}
+                                                width={48}
+                                                height={48}
+                                                className="rounded object-cover w-12 h-12"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                            </div>
                                         )}
+                                        <div>
+                                            <span className="font-medium">{product.nombre}</span>
+                                            {product.descripcion && (
+                                                <span className="text-muted-foreground text-xs block">
+                                                    {product.descripcion}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
