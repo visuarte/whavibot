@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { productCache } from './cache'
 
 // Prisma singleton para evitar múltiples conexiones en desarrollo
 const globalForPrisma = globalThis as unknown as {
@@ -16,8 +17,18 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 /**
  * Obtiene todos los productos de la base de datos
+ * Con caché en memoria para mejorar performance (productos rara vez cambian)
  */
 export async function getProductsFromDB() {
+    // Intenta obtener del caché primero
+    const cached = productCache.get()
+    if (cached) {
+        console.log('[ProductCache] Retornando productos desde caché')
+        return cached
+    }
+
+    // Si no está en caché, obtener de DB
+    console.log('[ProductCache] Obteniendo productos desde DB')
     const products = await prisma.product.findMany({
         orderBy: [
             { category: 'asc' },
@@ -29,6 +40,9 @@ export async function getProductsFromDB() {
             }
         }
     })
+
+    // Guardar en caché (1 hora)
+    productCache.set(products)
 
     return products
 }
@@ -50,12 +64,23 @@ export async function getProductByKeyDB(key: string) {
 }
 
 /**
- * Obtiene todas las cotizaciones
+ * Obtiene todas las cotizaciones (últimas 100)
+ * Optimizado: select solo campos necesarios, limit para performance
  */
 export async function getCotizaciones() {
     return await prisma.cotizacion.findMany({
+        take: 100,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+            id: true,
+            productId: true,
+            cantidad: true,
+            areaM2: true,
+            base: true,
+            iva: true,
+            total: true,
+            leadScoring: true,
+            createdAt: true,
             product: {
                 select: { nombre: true, key: true }
             }
@@ -64,14 +89,26 @@ export async function getCotizaciones() {
 }
 
 /**
- * Obtiene todos los leads
+ * Obtiene todos los leads (últimas 50)
+ * Optimizado: select específicos, limit
  */
 export async function getLeads() {
     return await prisma.lead.findMany({
+        take: 50,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+            id: true,
+            cotizacionId: true,
+            archivoNombre: true,
+            archivoPath: true,
+            mensaje: true,
+            leadScoring: true,
+            notificado: true,
+            createdAt: true,
             cotizacion: {
-                include: {
+                select: {
+                    id: true,
+                    productId: true,
                     product: {
                         select: { nombre: true, key: true }
                     }
@@ -144,19 +181,11 @@ export async function markLeadAsNotified(id: string) {
 
 /**
  * Obtiene productos del catálogo (para cotizar)
+ * Usa caché compartido con getProductsFromDB
  */
 export async function getProductCatalog() {
-    const products = await prisma.product.findMany({
-        orderBy: [
-            { nombre: 'asc' }
-        ],
-        include: {
-            prices: {
-                orderBy: { cantidad: 'asc' }
-            }
-        }
-    })
-    return products
+    // El catálogo es lo mismo que getProductsFromDB, reutiliza el caché
+    return getProductsFromDB()
 }
 
 /**
@@ -261,11 +290,20 @@ export const getLeadsRecientes = async (limit: number = 10) => {
     return await prisma.lead.findMany({
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+            id: true,
+            cotizacionId: true,
+            archivoNombre: true,
+            archivoPath: true,
+            mensaje: true,
+            leadScoring: true,
+            notificado: true,
+            createdAt: true,
             cotizacion: {
-                include: {
+                select: {
+                    id: true,
                     product: {
-                        select: { nombre: true, key: true }
+                        select: { nombre: true }
                     }
                 }
             }

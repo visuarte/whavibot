@@ -21,7 +21,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { LogOut, Loader2 } from "lucide-react"
+import { LogOut, Loader2, Filter, X } from "lucide-react"
+import { SkeletonTableRows } from "@/components/SkeletonLoader"
+import { DashboardStats } from "@/components/DashboardStats"
 
 // Tipo para cotizaciones
 interface CotizacionAdmin {
@@ -57,6 +59,8 @@ export default function AdminPage() {
     const [cotizaciones, setCotizaciones] = useState<CotizacionAdmin[]>([])
     const [leads, setLeads] = useState<LeadAdmin[]>([])
     const [loading, setLoading] = useState(true)
+    const [filterScoring, setFilterScoring] = useState<string | null>(null)
+    const [filterDateFrom, setFilterDateFrom] = useState<string>("")
 
     // Función para obtener datos
     const fetchData = useCallback(async () => {
@@ -188,12 +192,62 @@ export default function AdminPage() {
                     </div>
                 </div>
 
-                {loading && (
-                    <div className="text-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        <p className="text-gray-600 mt-2">Cargando datos...</p>
-                    </div>
+                {/* Estadísticas y Gráficos */}
+                {!loading && cotizaciones.length > 0 && (
+                    <DashboardStats cotizaciones={cotizaciones} />
                 )}
+
+                {/* Filtros */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Filter className="h-4 w-4" />
+                            Filtros
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                            <div className="flex-1">
+                                <label className="text-sm font-medium">Por scoring:</label>
+                                <div className="flex gap-2 mt-2">
+                                    <Button
+                                        size="sm"
+                                        variant={filterScoring === "caliente" ? "default" : "outline"}
+                                        onClick={() => setFilterScoring(filterScoring === "caliente" ? null : "caliente")}
+                                    >
+                                        🔥 Caliente
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={filterScoring === "tibio" ? "default" : "outline"}
+                                        onClick={() => setFilterScoring(filterScoring === "tibio" ? null : "tibio")}
+                                    >
+                                        🌡️ Tibio
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={filterScoring === "frio" ? "default" : "outline"}
+                                        onClick={() => setFilterScoring(filterScoring === "frio" ? null : "frio")}
+                                    >
+                                        ❄️ Frío
+                                    </Button>
+                                </div>
+                            </div>
+                            <div>
+                                {filterScoring && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setFilterScoring(null)}
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Limpiar
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Cotizaciones */}
                 <Card>
@@ -218,30 +272,35 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {cotizaciones.slice(0, 20).map((cot) => (
-                                        <TableRow key={cot.id}>
-                                            <TableCell className="whitespace-nowrap">
-                                                {formatDate(cot.createdAt)}
-                                            </TableCell>
-                                            <TableCell className="font-medium">
-                                                {cot.product?.nombre || "Producto"}
-                                            </TableCell>
-                                            <TableCell>
-                                                {cot.cantidad
-                                                    ? `${cot.cantidad} uds`
-                                                    : cot.areaM2
-                                                        ? `${cot.areaM2} m²`
-                                                        : "-"}
-                                            </TableCell>
-                                            <TableCell>{formatPrice(cot.base)}</TableCell>
-                                            <TableCell>{formatPrice(cot.iva)}</TableCell>
-                                            <TableCell className="font-bold">
-                                                {formatPrice(cot.total)}
-                                            </TableCell>
-                                            <TableCell>{getScoringBadge(cot.leadScoring)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {cotizaciones.length === 0 && !loading && (
+                                    {loading ? (
+                                        <SkeletonTableRows columns={7} rows={5} />
+                                    ) : cotizaciones.length > 0 ? (
+                                        cotizaciones
+                                            .filter(cot => !filterScoring || cot.leadScoring === filterScoring)
+                                            .slice(0, 20).map((cot) => (
+                                            <TableRow key={cot.id}>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {formatDate(cot.createdAt)}
+                                                </TableCell>
+                                                <TableCell className="font-medium">
+                                                    {cot.product?.nombre || "Producto"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {cot.cantidad
+                                                        ? `${cot.cantidad} uds`
+                                                        : cot.areaM2
+                                                            ? `${cot.areaM2} m²`
+                                                            : "-"}
+                                                </TableCell>
+                                                <TableCell>{formatPrice(cot.base)}</TableCell>
+                                                <TableCell>{formatPrice(cot.iva)}</TableCell>
+                                                <TableCell className="font-bold">
+                                                    {formatPrice(cot.total)}
+                                                </TableCell>
+                                                <TableCell>{getScoringBadge(cot.leadScoring)}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center text-gray-500">
                                                 No hay cotizaciones todavía
@@ -276,56 +335,59 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {leads.slice(0, 10).map((lead) => (
-                                        <TableRow key={lead.id}>
-                                            <TableCell className="whitespace-nowrap">
-                                                {formatDate(lead.createdAt)}
-                                            </TableCell>
-                                            <TableCell className="max-w-[200px]">
-                                                {lead.archivoNombre ? (
-                                                    <a
-                                                        href={lead.archivoPath || "#"}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:underline truncate block"
-                                                    >
-                                                        {lead.archivoNombre}
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-gray-400">Sin archivo</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="max-w-[200px]">
-                                                <span className="truncate block">
-                                                    {lead.mensaje || "-"}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>{getScoringBadge(lead.leadScoring)}</TableCell>
-                                            <TableCell>
-                                                {lead.notificado ? (
-                                                    <Badge variant="outline" className="text-green-600 border-green-600">
-                                                        ✅ Enviado
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-gray-500">
-                                                        ⏳ Pendiente
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {!lead.notificado && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleMarcarNotificado(lead.id)}
-                                                    >
-                                                        📱 Notificar
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {leads.length === 0 && !loading && (
+                                    {loading ? (
+                                        <SkeletonTableRows columns={6} rows={5} />
+                                    ) : leads.length > 0 ? (
+                                        leads.slice(0, 10).map((lead) => (
+                                            <TableRow key={lead.id}>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {formatDate(lead.createdAt)}
+                                                </TableCell>
+                                                <TableCell className="max-w-[200px]">
+                                                    {lead.archivoNombre ? (
+                                                        <a
+                                                            href={lead.archivoPath || "#"}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:underline truncate block"
+                                                        >
+                                                            {lead.archivoNombre}
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-400">Sin archivo</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="max-w-[200px]">
+                                                    <span className="truncate block">
+                                                        {lead.mensaje || "-"}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>{getScoringBadge(lead.leadScoring)}</TableCell>
+                                                <TableCell>
+                                                    {lead.notificado ? (
+                                                        <Badge variant="outline" className="text-green-600 border-green-600">
+                                                            ✅ Enviado
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-gray-500">
+                                                            ⏳ Pendiente
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {!lead.notificado && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleMarcarNotificado(lead.id)}
+                                                        >
+                                                            📱 Notificar
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center text-gray-500">
                                                 No hay leads todavía

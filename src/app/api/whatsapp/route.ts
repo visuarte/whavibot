@@ -1,22 +1,46 @@
 import { NextResponse } from "next/server"
+import { z } from "zod"
 
 /**
- * Endpoint API para enviar notificaciones de WhatsApp
+ * API Route: /api/whatsapp
  * 
- * POST /api/whatsapp
- * Body: { message: string }
+ * Envía notificaciones de WhatsApp a través de CallMeBot API.
+ * 
+ * Método: POST
+ * Body: {
+ *   message: string (1-4096 caracteres)
+ * }
+ * 
+ * Respuesta:
+ * {
+ *   success: boolean,
+ *   message?: string,
+ *   error?: string
+ * }
+ * 
+ * Códigos de error:
+ * - 400: Mensaje requerido o inválido
+ * - 500: Configuración de WhatsApp incompleta o error al enviar
  */
+
+const whatsappMessageSchema = z.object({
+    message: z.string().min(1, "Mensaje requerido").max(4096, "Mensaje muy largo"),
+})
+
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { message } = body
-
-        if (!message) {
+        
+        // Validar con Zod
+        const validation = whatsappMessageSchema.safeParse(body)
+        if (!validation.success) {
             return NextResponse.json(
-                { error: "Se requiere un mensaje" },
+                { error: "Datos inválidos", details: validation.error.issues },
                 { status: 400 }
             )
         }
+
+        const { message } = validation.data
 
         // Obtener variables de entorno del servidor
         const phoneNumber = process.env.WHATSAPP_PHONE

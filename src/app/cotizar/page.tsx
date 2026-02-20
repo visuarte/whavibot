@@ -37,26 +37,29 @@ export default function CotizarPage() {
             try {
                 // Llamar a API para obtener productos (server-side)
                 const res = await fetch('/api/productos')
-                const data = await res.json()
+                const data = await res.json() as { products: Array<any> }
                 const products = data.products || []
 
                 // Transformar para el frontend
-                const list: ProductCatalog[] = products.map((p: any) => ({
-                    key: p.key,
-                    nombre: p.nombre,
-                    descripcion: p.descripcion || '',
-                    imagen: p.imagen || '',
-                    tipo: p.tipo as "cantidad_fija" | "por_m2",
-                    unidad: p.unidad as "uds" | "m²",
-                    precios: p.prices?.reduce((acc: Record<number, number>, px: any) => {
-                        acc[px.cantidad] = px.precioBase
-                        return acc
-                    }, {} as Record<number, number>) || {},
-                    cantidadesDisponibles: p.prices?.map((px: any) => px.cantidad).sort((a: number, b: number) => a - b) || [],
-                    variantes: [...new Set(p.prices?.map((px: any) => px.variante).filter(Boolean))] as string[],
-                    precioPorM2: p.precioPorM2,
-                    category: p.category || 'sin_categoria'
-                }))
+                const list: ProductCatalog[] = products.map((p) => {
+                    const prices = p.prices || []
+                    return {
+                        key: p.key,
+                        nombre: p.nombre,
+                        descripcion: p.descripcion || '',
+                        imagen: p.imagen || '',
+                        tipo: p.tipo as "cantidad_fija" | "por_m2",
+                        unidad: p.unidad as "uds" | "m²",
+                        precios: prices.reduce((acc: Record<number, number>, px: { cantidad: number; precioBase: number }) => {
+                            acc[px.cantidad] = px.precioBase
+                            return acc
+                        }, {} as Record<number, number>),
+                        cantidadesDisponibles: prices.map((px: { cantidad: number }) => px.cantidad).sort((a: number, b: number) => a - b),
+                        variantes: [...new Set(prices.map((px: { variante?: string }) => px.variante).filter(Boolean))] as string[],
+                        precioPorM2: p.precioPorM2,
+                        category: p.category || 'sin_categoria'
+                    }
+                })
                 setProductList(list)
                 const map: Record<string, ProductCatalog> = {}
                 list.forEach((p: ProductCatalog) => { map[p.key] = p })
