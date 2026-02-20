@@ -30,6 +30,11 @@ export default function CotizarPage() {
     const [loading, setLoading] = useState(true)
     const [productList, setProductList] = useState<ProductCatalog[]>([])
     const [productsMap, setProductsMap] = useState<Record<string, ProductCatalog>>({})
+    // Modo de entrada para productos por_m2/gran_formato: "cantidad" o "dimensiones"
+    const [modoEntradaArea, setModoEntradaArea] = useState<"cantidad" | "dimensiones">("dimensiones")
+    const [anchoCm, setAnchoCm] = useState<string>("100")
+    const [altoCm, setAltoCm] = useState<string>("100")
+    const [cantidadUnidades, setCantidadUnidades] = useState<string>("1")
 
     // Cargar productos desde DB al montar
     useEffect(() => {
@@ -37,26 +42,34 @@ export default function CotizarPage() {
             try {
                 // Llamar a API para obtener productos (server-side)
                 const res = await fetch('/api/productos')
-                const data = await res.json()
+                const data = await res.json() as { products: Array<any> }
                 const products = data.products || []
 
                 // Transformar para el frontend
-                const list: ProductCatalog[] = products.map((p: any) => ({
-                    key: p.key,
-                    nombre: p.nombre,
-                    descripcion: p.descripcion || '',
-                    imagen: p.imagen || '',
-                    tipo: p.tipo as "cantidad_fija" | "por_m2",
-                    unidad: p.unidad as "uds" | "m²",
-                    precios: p.prices?.reduce((acc: Record<number, number>, px: any) => {
-                        acc[px.cantidad] = px.precioBase
-                        return acc
-                    }, {} as Record<number, number>) || {},
-                    cantidadesDisponibles: p.prices?.map((px: any) => px.cantidad).sort((a: number, b: number) => a - b) || [],
-                    variantes: [...new Set(p.prices?.map((px: any) => px.variante).filter(Boolean))] as string[],
-                    precioPorM2: p.precioPorM2,
-                    category: p.category || 'sin_categoria'
-                }))
+                const list: ProductCatalog[] = products.map((p) => {
+                    const prices = p.prices || []
+                    return {
+                        key: p.key,
+                        nombre: p.nombre,
+                        descripcion: p.descripcion || '',
+                        imagen: p.imagen || '',
+                        tipo: p.tipo as "cantidad_fija" | "por_m2" | "gran_formato",
+                        unidad: p.unidad as "uds" | "m²" | "cm",
+                        precios: prices.reduce((acc: Record<number, number>, px: { cantidad: number; precioBase: number }) => {
+                            acc[px.cantidad] = px.precioBase
+                            return acc
+                        }, {} as Record<number, number>),
+                        cantidadesDisponibles: prices.map((px: { cantidad: number }) => px.cantidad).sort((a: number, b: number) => a - b),
+                        variantes: [...new Set(prices.map((px: { variante?: string }) => px.variante).filter(Boolean))] as string[],
+                        precioPorM2: p.precioPorM2 ? parseFloat(p.precioPorM2) : undefined,
+                        category: p.category || 'sin_categoria',
+                        materialType: p.materialType,
+                        anchoMinCm: p.anchoMinCm,
+                        anchoMaxCm: p.anchoMaxCm,
+                        altoMinCm: p.altoMinCm,
+                        altoMaxCm: p.altoMaxCm,
+                    }
+                })
                 setProductList(list)
                 const map: Record<string, ProductCatalog> = {}
                 list.forEach((p: ProductCatalog) => { map[p.key] = p })
@@ -113,7 +126,28 @@ export default function CotizarPage() {
         setResultado(null)
         setCalculoRealizado(false)
         setSelectedVariante("")
+        setModoEntradaArea("dimensiones")
+        setAnchoCm("100")
+        setAltoCm("100")
+        setCantidadUnidades("1")
+        setAreaM2("1")
     }
+
+    // Determina si el producto seleccionado usa area (m2)
+    const esProductoArea = productoSeleccionado?.tipo === "por_m2" || productoSeleccionado?.tipo === "gran_formato"
+
+    // Calcula m2 a partir de ancho x alto en cm
+    const anchoNum = parseFloat(anchoCm) || 0
+    const altoNum = parseFloat(altoCm) || 0
+    const m2DesdeDimensiones = (anchoNum * altoNum) / 10000
+    const cantUnidades = parseInt(cantidadUnidades) || 1
+
+    // Area total segun modo
+    const areaTotal = esProductoArea
+        ? (modoEntradaArea === "dimensiones"
+            ? m2DesdeDimensiones * cantUnidades
+            : (parseFloat(areaM2) || 1))
+        : 0
 
     const handleCalcular = async () => {
         if (!selectedProductKey) return
@@ -123,18 +157,19 @@ export default function CotizarPage() {
             const varianteIndex = tieneVars && selectedVariante ? variantes.indexOf(selectedVariante) : undefined
 
             let cantidad: number | string = selectedCantidad
+            let areaM2Final: number | undefined
 
-            if (producto.tipo === "por_m2") {
-                cantidad = parseFloat(areaM2) || 1
+            if (esProductoArea) {
+                areaM2Final = areaTotal
+                cantidad = areaTotal
             } else {
                 cantidad = parseInt(selectedCantidad) || 0
             }
 
-            // Usar Server Action para calcular precio (ejecuta en servidor, no bundlea Prisma)
             const result = await calcularPrecioServer(
                 selectedProductKey,
                 cantidad,
-                producto.tipo === "por_m2" ? parseFloat(areaM2) || 1 : undefined,
+                areaM2Final,
                 varianteIndex !== undefined && varianteIndex >= 0 ? varianteIndex : undefined
             )
 
@@ -258,22 +293,156 @@ export default function CotizarPage() {
                                 </div>
                             )}
 
-                            {productoSeleccionado?.tipo === "por_m2" && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="area">Área (m²)</Label>
-                                    <Input
-                                        id="area"
-                                        type="number"
-                                        min="0.1"
-                                        step="0.1"
-                                        value={areaM2}
-                                        onChange={(e) => setAreaM2(e.target.value)}
-                                        placeholder="Introduce los metros cuadrados"
-                                    />
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                        <Info className="h-4 w-4" />
-                                        Precio por m²: {formatCurrency(productoSeleccionado.precioPorM2 || 0)}
-                                    </p>
+                            {esProductoArea && productoSeleccionado && (
+                                <div className="space-y-4">
+                                    {/* Selector de modo */}
+                                    <div className="space-y-2">
+                                        <Label>Modo de cotizacion</Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                type="button"
+                                                variant={modoEntradaArea === "dimensiones" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setModoEntradaArea("dimensiones")}
+                                                className="w-full"
+                                            >
+                                                Ancho x Alto (cm)
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant={modoEntradaArea === "cantidad" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setModoEntradaArea("cantidad")}
+                                                className="w-full"
+                                            >
+                                                Introducir m² directamente
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {modoEntradaArea === "dimensiones" ? (
+                                        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="ancho" className="text-sm font-semibold">Ancho (cm)</Label>
+                                                    <Input
+                                                        id="ancho"
+                                                        type="number"
+                                                        min="1"
+                                                        step="0.5"
+                                                        value={anchoCm}
+                                                        onChange={(e) => setAnchoCm(e.target.value)}
+                                                        placeholder="Ancho en cm"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="alto" className="text-sm font-semibold">Alto (cm)</Label>
+                                                    <Input
+                                                        id="alto"
+                                                        type="number"
+                                                        min="1"
+                                                        step="0.5"
+                                                        value={altoCm}
+                                                        onChange={(e) => setAltoCm(e.target.value)}
+                                                        placeholder="Alto en cm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Cantidad de unidades */}
+                                            <div className="space-y-1">
+                                                <Label htmlFor="cantUnidades" className="text-sm font-semibold">Cantidad de unidades</Label>
+                                                <Input
+                                                    id="cantUnidades"
+                                                    type="number"
+                                                    min="1"
+                                                    step="1"
+                                                    value={cantidadUnidades}
+                                                    onChange={(e) => setCantidadUnidades(e.target.value)}
+                                                    placeholder="Numero de unidades"
+                                                />
+                                            </div>
+
+                                            {/* Presets comunes */}
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Medidas rapidas</Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {[
+                                                        { nombre: "A3", ancho: 42, alto: 29.7 },
+                                                        { nombre: "A2", ancho: 59.4, alto: 42 },
+                                                        { nombre: "A1", ancho: 84.1, alto: 59.4 },
+                                                        { nombre: "A0", ancho: 118.9, alto: 84.1 },
+                                                        { nombre: "50x70", ancho: 50, alto: 70 },
+                                                        { nombre: "100x70", ancho: 100, alto: 70 },
+                                                    ].map((preset) => (
+                                                        <Button
+                                                            key={preset.nombre}
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs h-7 px-2"
+                                                            onClick={() => {
+                                                                setAnchoCm(String(preset.ancho))
+                                                                setAltoCm(String(preset.alto))
+                                                            }}
+                                                        >
+                                                            {preset.nombre}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Resumen */}
+                                            <div className="bg-background rounded-lg p-3 border space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Dimensiones:</span>
+                                                    <span className="font-medium">{anchoNum.toFixed(1)} x {altoNum.toFixed(1)} cm</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Area por unidad:</span>
+                                                    <span className="font-medium">{m2DesdeDimensiones.toFixed(4)} m2</span>
+                                                </div>
+                                                {cantUnidades > 1 && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Unidades:</span>
+                                                        <span className="font-medium">{cantUnidades}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between border-t pt-2">
+                                                    <span className="font-semibold">Area total:</span>
+                                                    <span className="font-bold text-primary">{areaTotal.toFixed(4)} m2</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Precio/m2:</span>
+                                                    <span className="font-medium">{formatCurrency(productoSeleccionado.precioPorM2 || 0)}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t pt-2">
+                                                    <span className="font-semibold">Estimado (sin IVA):</span>
+                                                    <span className="font-bold text-primary">
+                                                        {formatCurrency(areaTotal * (productoSeleccionado.precioPorM2 || 0))}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="area">Area total (m2)</Label>
+                                            <Input
+                                                id="area"
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                value={areaM2}
+                                                onChange={(e) => setAreaM2(e.target.value)}
+                                                placeholder="Introduce los metros cuadrados"
+                                            />
+                                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Info className="h-4 w-4" />
+                                                Precio por m2: {formatCurrency(productoSeleccionado.precioPorM2 || 0)} -
+                                                Estimado: {formatCurrency((parseFloat(areaM2) || 0) * (productoSeleccionado.precioPorM2 || 0))} sin IVA
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -309,7 +478,7 @@ export default function CotizarPage() {
                                 className="w-full"
                                 size="lg"
                                 onClick={handleCalcular}
-                                disabled={!selectedProductKey || (productoSeleccionado?.tipo === "cantidad_fija" && !selectedCantidad)}
+                                disabled={!selectedProductKey || (productoSeleccionado?.tipo === "cantidad_fija" && !selectedCantidad) || (esProductoArea && areaTotal <= 0)}
                             >
                                 <Calculator className="mr-2 h-4 w-4" />
                                 Calcular Precio
@@ -327,9 +496,23 @@ export default function CotizarPage() {
                                 <CardDescription>
                                     {resultado.producto.nombre}
                                     {selectedVariante && ` - ${selectedVariante}`}
-                                    {" - "}{typeof resultado.cantidad === "number"
-                                        ? resultado.cantidad.toLocaleString("es-ES")
-                                        : resultado.cantidad} {productoSeleccionado?.unidad}
+                                    {esProductoArea && modoEntradaArea === "dimensiones" ? (
+                                        <>
+                                            {" - "}{anchoNum.toFixed(1)} x {altoNum.toFixed(1)} cm
+                                            {cantUnidades > 1 && ` x ${cantUnidades} uds`}
+                                            {" - "}{areaTotal.toFixed(2)} m2 total
+                                        </>
+                                    ) : esProductoArea ? (
+                                        <>
+                                            {" - "}{areaTotal.toFixed(2)} m2
+                                        </>
+                                    ) : (
+                                        <>
+                                            {" - "}{typeof resultado.cantidad === "number"
+                                                ? resultado.cantidad.toLocaleString("es-ES")
+                                                : resultado.cantidad} {productoSeleccionado?.unidad}
+                                        </>
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
