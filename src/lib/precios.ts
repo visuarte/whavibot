@@ -28,7 +28,8 @@ const PRODUCTS_FALLBACK: Record<string, ProductCatalog> = {
             500: 70.76,
             1000: 90.05,
             2500: 165.45
-        }
+        },
+        category: "pequeño_formato"
     },
     lona_frontlit: {
         key: "lona_frontlit",
@@ -38,7 +39,44 @@ const PRODUCTS_FALLBACK: Record<string, ProductCatalog> = {
         tipo: "por_m2",
         precioPorM2: 7.00,
         unidad: "m²",
-        cantidadesDisponibles: []
+        cantidadesDisponibles: [],
+        category: "sin_categoria"
+    },
+    lona_flexible: {
+        key: "lona_flexible",
+        nombre: "Lona Flexible",
+        descripcion: "Lona publicitaria flexible - Configure ancho y alto en cm",
+        imagen: "",
+        tipo: "gran_formato",
+        precioPorM2: 7.00,
+        unidad: "m²",
+        cantidadesDisponibles: [],
+        category: "gran_formato_flexible",
+        materialType: "flexible",
+        anchoMinCm: 10,
+        anchoMaxCm: 300,
+        altoMinCm: 10,
+        altoMaxCm: 300,
+        anchoRecomendadoCm: 100,
+        altoRecomendadoCm: 100
+    },
+    foam_rigido: {
+        key: "foam_rigido",
+        nombre: "Foam Rígido",
+        descripcion: "Paneles de espuma rígida - Configure ancho y alto en cm",
+        imagen: "",
+        tipo: "gran_formato",
+        precioPorM2: 5.50,
+        unidad: "m²",
+        cantidadesDisponibles: [],
+        category: "gran_formato_rigido",
+        materialType: "rigido",
+        anchoMinCm: 20,
+        anchoMaxCm: 250,
+        altoMinCm: 20,
+        altoMaxCm: 250,
+        anchoRecomendadoCm: 120,
+        altoRecomendadoCm: 80
     }
 }
 
@@ -63,7 +101,38 @@ function dbToCatalog(p: any): ProductCatalog {
         precioPorM2: p.precioPorM2 ? parseFloat(p.precioPorM2) : undefined,
         unidad: p.unidad as ProductUnit,
         cantidadesDisponibles: cantidades,
-        precios
+        precios,
+        category: p.category,
+        // Campos de gran formato
+        materialType: p.materialType,
+        anchoMinCm: p.anchoMinCm,
+        anchoMaxCm: p.anchoMaxCm,
+        altoMinCm: p.altoMinCm,
+        altoMaxCm: p.altoMaxCm,
+        anchoRecomendadoCm: p.anchoRecomendadoCm,
+        altoRecomendadoCm: p.altoRecomendadoCm
+    }
+}
+
+    return {
+        key: p.key,
+        nombre: p.nombre,
+        descripcion: p.descripcion,
+        imagen: p.imagen,
+        tipo: p.tipo as ProductType,
+        precioPorM2: p.precioPorM2 ? parseFloat(p.precioPorM2) : undefined,
+        unidad: p.unidad as ProductUnit,
+        cantidadesDisponibles: cantidades,
+        precios,
+        category: p.category,
+        // Propiedades de gran formato
+        materialType: p.materialType,
+        anchoMinCm: p.anchoMinCm,
+        anchoMaxCm: p.anchoMaxCm,
+        altoMinCm: p.altoMinCm,
+        altoMaxCm: p.altoMaxCm,
+        anchoRecomendadoCm: p.anchoRecomendadoCm,
+        altoRecomendadoCm: p.altoRecomendadoCm
     }
 }
 
@@ -169,8 +238,14 @@ export async function calcularPrecio(
     let base = 0
     let cantidadFinal: number
 
+    // Producto de gran formato (flexible/rígido)
+    if (producto.tipo === "gran_formato") {
+        const area = areaM2 || 1
+        base = (producto.precioPorM2 || 0) * area
+        cantidadFinal = area
+    }
     // Producto por metro cuadrado
-    if (producto.tipo === "por_m2") {
+    else if (producto.tipo === "por_m2") {
         const area = areaM2 || 1
         base = (producto.precioPorM2 || 0) * area
         cantidadFinal = area

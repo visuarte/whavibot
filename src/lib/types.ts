@@ -2,8 +2,8 @@
  * Tipos para el catálogo de productos
  */
 
-export type ProductType = "cantidad_fija" | "por_m2"
-export type ProductUnit = "uds" | "m²"
+export type ProductType = "cantidad_fija" | "por_m2" | "gran_formato"
+export type ProductUnit = "uds" | "m²" | "cm"
 
 export interface ProductVariant {
     nombre: string
@@ -22,6 +22,14 @@ export interface ProductCatalog {
     precios?: Record<number, number>
     variantes?: ProductVariant[]
     category?: string
+    // Para gran formato (flexible/rígido)
+    materialType?: string // 'flexible' | 'rigido' | etc
+    anchoMinCm?: number
+    anchoMaxCm?: number
+    altoMinCm?: number
+    altoMaxCm?: number
+    anchoRecomendadoCm?: number
+    altoRecomendadoCm?: number
 }
 
 export interface PrecioCalculado {

@@ -19,6 +19,7 @@ import {
     IVA_PERCENT
 } from "@/lib/precios"
 import { calcularPrecioServer } from "@/app/actions"
+import { ConfiguradorGranFormato, type ConfiguracionGranFormato } from "@/components/ConfiguradorGranFormato"
 
 export default function CotizarPage() {
     const [selectedProductKey, setSelectedProductKey] = useState<string>("")
@@ -30,6 +31,7 @@ export default function CotizarPage() {
     const [loading, setLoading] = useState(true)
     const [productList, setProductList] = useState<ProductCatalog[]>([])
     const [productsMap, setProductsMap] = useState<Record<string, ProductCatalog>>({})
+    const [configuracionGranFormato, setConfiguracionGranFormato] = useState<ConfiguracionGranFormato | null>(null)
 
     // Cargar productos desde DB al montar
     useEffect(() => {
@@ -116,6 +118,7 @@ export default function CotizarPage() {
         setResultado(null)
         setCalculoRealizado(false)
         setSelectedVariante("")
+        setConfiguracionGranFormato(null)
     }
 
     const handleCalcular = async () => {
@@ -126,9 +129,19 @@ export default function CotizarPage() {
             const varianteIndex = tieneVars && selectedVariante ? variantes.indexOf(selectedVariante) : undefined
 
             let cantidad: number | string = selectedCantidad
+            let areaM2Final: number | undefined
 
-            if (producto.tipo === "por_m2") {
-                cantidad = parseFloat(areaM2) || 1
+            if (producto.tipo === "gran_formato") {
+                // Para gran formato, usar m² de la configuración
+                if (!configuracionGranFormato) {
+                    console.error("Configuración de gran formato no establecida")
+                    return
+                }
+                areaM2Final = configuracionGranFormato.m2
+                cantidad = configuracionGranFormato.m2
+            } else if (producto.tipo === "por_m2") {
+                areaM2Final = parseFloat(areaM2) || 1
+                cantidad = areaM2Final
             } else {
                 cantidad = parseInt(selectedCantidad) || 0
             }
@@ -137,7 +150,7 @@ export default function CotizarPage() {
             const result = await calcularPrecioServer(
                 selectedProductKey,
                 cantidad,
-                producto.tipo === "por_m2" ? parseFloat(areaM2) || 1 : undefined,
+                areaM2Final,
                 varianteIndex !== undefined && varianteIndex >= 0 ? varianteIndex : undefined
             )
 
@@ -312,13 +325,21 @@ export default function CotizarPage() {
                                 className="w-full"
                                 size="lg"
                                 onClick={handleCalcular}
-                                disabled={!selectedProductKey || (productoSeleccionado?.tipo === "cantidad_fija" && !selectedCantidad)}
+                                disabled={!selectedProductKey || (productoSeleccionado?.tipo === "cantidad_fija" && !selectedCantidad) || (productoSeleccionado?.tipo === "gran_formato" && !configuracionGranFormato)}
                             >
                                 <Calculator className="mr-2 h-4 w-4" />
                                 Calcular Precio
                             </Button>
                         </CardFooter>
                     </Card>
+
+                    {productoSeleccionado?.tipo === "gran_formato" && (
+                        <ConfiguradorGranFormato
+                            producto={productoSeleccionado}
+                            precioPorM2={productoSeleccionado.precioPorM2 || 0}
+                            onConfiguracionChange={setConfiguracionGranFormato}
+                        />
+                    )}
 
                     {resultado && calculoRealizado && (
                         <Card className="border-2 border-primary/50 bg-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -330,9 +351,18 @@ export default function CotizarPage() {
                                 <CardDescription>
                                     {resultado.producto.nombre}
                                     {selectedVariante && ` - ${selectedVariante}`}
-                                    {" - "}{typeof resultado.cantidad === "number"
-                                        ? resultado.cantidad.toLocaleString("es-ES")
-                                        : resultado.cantidad} {productoSeleccionado?.unidad}
+                                    {productoSeleccionado?.tipo === "gran_formato" && configuracionGranFormato ? (
+                                        <>
+                                            {" - "}{configuracionGranFormato.anchoCm.toFixed(1)} cm × {configuracionGranFormato.altoCm.toFixed(1)} cm
+                                            {" - "}{configuracionGranFormato.m2.toFixed(2)} m²
+                                        </>
+                                    ) : (
+                                        <>
+                                            {" - "}{typeof resultado.cantidad === "number"
+                                                ? resultado.cantidad.toLocaleString("es-ES")
+                                                : resultado.cantidad} {productoSeleccionado?.unidad}
+                                        </>
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
