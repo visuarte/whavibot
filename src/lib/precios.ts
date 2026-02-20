@@ -114,28 +114,6 @@ function dbToCatalog(p: any): ProductCatalog {
     }
 }
 
-    return {
-        key: p.key,
-        nombre: p.nombre,
-        descripcion: p.descripcion,
-        imagen: p.imagen,
-        tipo: p.tipo as ProductType,
-        precioPorM2: p.precioPorM2 ? parseFloat(p.precioPorM2) : undefined,
-        unidad: p.unidad as ProductUnit,
-        cantidadesDisponibles: cantidades,
-        precios,
-        category: p.category,
-        // Propiedades de gran formato
-        materialType: p.materialType,
-        anchoMinCm: p.anchoMinCm,
-        anchoMaxCm: p.anchoMaxCm,
-        altoMinCm: p.altoMinCm,
-        altoMaxCm: p.altoMaxCm,
-        anchoRecomendadoCm: p.anchoRecomendadoCm,
-        altoRecomendadoCm: p.altoRecomendadoCm
-    }
-}
-
 /**
  * Obtiene productos desde DB (fuente principal)
  */
