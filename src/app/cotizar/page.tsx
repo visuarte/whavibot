@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Calculator, Printer, CheckCircle, Info, Loader2, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -54,7 +54,8 @@ export default function CotizarPage() {
                     }, {} as Record<number, number>) || {},
                     cantidadesDisponibles: p.precios?.map((px: any) => px.cantidad).sort((a: number, b: number) => a - b) || [],
                     variantes: [...new Set(p.precios?.map((px: any) => px.variante).filter(Boolean))] as string[],
-                    precioPorM2: p.precioPorM2
+                    precioPorM2: p.precioPorM2,
+                    category: p.category || 'sin_categoria'
                 }))
                 setProductList(list)
                 const map: Record<string, ProductCatalog> = {}
@@ -75,6 +76,36 @@ export default function CotizarPage() {
     const productoSeleccionado = selectedProductKey ? productsMap[selectedProductKey] : null
     const tieneVars = productoSeleccionado ? tieneVariantes(productoSeleccionado) : false
     const variantes = productoSeleccionado ? getVariantes(productoSeleccionado) : []
+
+    // Agrupar productos por categoría
+    const productsByCategory = productList.reduce((acc, product) => {
+        const cat = product.category || 'sin_categoria'
+        if (!acc[cat]) {
+            acc[cat] = []
+        }
+        acc[cat].push(product)
+        return acc
+    }, {} as Record<string, ProductCatalog[]>)
+
+    // Ordenar categorías
+    const categoryOrder = ['pequeño_formato', 'gran_formato_flexible', 'gran_formato_rigido', 'senaletica', 'sin_categoria']
+    const sortedCategories = Object.keys(productsByCategory).sort((a, b) => {
+        const idxA = categoryOrder.indexOf(a)
+        const idxB = categoryOrder.indexOf(b)
+        if (idxA === -1 && idxB === -1) return a.localeCompare(b)
+        if (idxA === -1) return 1
+        if (idxB === -1) return -1
+        return idxA - idxB
+    })
+
+    // Nombres amigables para categorías
+    const categoryNames: Record<string, string> = {
+        'pequeño_formato': 'Pequeño Formato',
+        'gran_formato_flexible': 'Gran Formato Flexible',
+        'gran_formato_rigido': 'Gran Formato Rígido',
+        'senaletica': 'Senyalética',
+        'sin_categoria': 'Otros'
+    }
 
     const handleProductChange = (key: string) => {
         setSelectedProductKey(key)
@@ -183,11 +214,27 @@ export default function CotizarPage() {
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {productList.map((product) => (
-                                            <SelectItem key={product.key} value={product.key}>
-                                                {product.nombre}
-                                                {product.descripcion && ` - ${product.descripcion}`}
-                                            </SelectItem>
+                                        {sortedCategories.map((category) => (
+                                            <SelectGroup key={category}>
+                                                <SelectLabel className="font-bold text-primary bg-muted/50 px-2 py-1">
+                                                    {categoryNames[category] || category}
+                                                </SelectLabel>
+                                                {productsByCategory[category].map((product) => (
+                                                    <SelectItem key={product.key} value={product.key} className="flex items-center gap-2">
+                                                        {product.imagen && (
+                                                            <Image
+                                                                src={product.imagen}
+                                                                alt={product.nombre}
+                                                                width={24}
+                                                                height={24}
+                                                                className="w-6 h-6 object-cover rounded"
+                                                                unoptimized
+                                                            />
+                                                        )}
+                                                        <span>{product.nombre}</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectGroup>
                                         ))}
                                     </SelectContent>
                                 </Select>

@@ -21,6 +21,7 @@ export interface ProductCatalog {
     unidad: ProductUnit
     precios?: Record<number, number>
     variantes?: ProductVariant[]
+    category?: string
 }
 
 export interface PrecioCalculado {
