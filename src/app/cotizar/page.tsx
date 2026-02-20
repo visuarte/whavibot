@@ -48,12 +48,12 @@ export default function CotizarPage() {
                     imagen: p.imagen || '',
                     tipo: p.tipo as "cantidad_fija" | "por_m2",
                     unidad: p.unidad as "uds" | "m²",
-                    precios: p.precios?.reduce((acc: Record<number, number>, px: any) => {
+                    precios: p.prices?.reduce((acc: Record<number, number>, px: any) => {
                         acc[px.cantidad] = px.precioBase
                         return acc
                     }, {} as Record<number, number>) || {},
-                    cantidadesDisponibles: p.precios?.map((px: any) => px.cantidad).sort((a: number, b: number) => a - b) || [],
-                    variantes: [...new Set(p.precios?.map((px: any) => px.variante).filter(Boolean))] as string[],
+                    cantidadesDisponibles: p.prices?.map((px: any) => px.cantidad).sort((a: number, b: number) => a - b) || [],
+                    variantes: [...new Set(p.prices?.map((px: any) => px.variante).filter(Boolean))] as string[],
                     precioPorM2: p.precioPorM2,
                     category: p.category || 'sin_categoria'
                 }))
