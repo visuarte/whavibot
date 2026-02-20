@@ -34,6 +34,10 @@ const ADMIN_CREDENTIALS = {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+    // Secret para firmar los tokens JWT - REQUERIDO para producción
+    secret: process.env.NEXTAUTH_SECRET,
+    // Trust host es necesario para Vercel y otros proxies
+    trustHost: true,
     pages: {
         signIn: "/login", // Página de login personalizada
     },
